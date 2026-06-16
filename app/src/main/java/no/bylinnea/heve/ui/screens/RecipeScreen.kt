@@ -2,6 +2,7 @@ package no.bylinnea.heve.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,27 +17,46 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import no.bylinnea.heve.ui.components.HeveCard
 import no.bylinnea.heve.ui.components.IngredientSlider
 import no.bylinnea.heve.ui.theme.Bricolage
+import no.bylinnea.heve.ui.theme.CreamHoney
 import no.bylinnea.heve.ui.theme.Espresso
 import no.bylinnea.heve.ui.theme.Hanken
 import no.bylinnea.heve.ui.theme.HeveTheme
+import no.bylinnea.heve.ui.theme.SurfaceCream
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -44,9 +64,12 @@ import kotlin.math.roundToInt
 fun RecipeScreen(
     modifier: Modifier = Modifier
 ) {
+    var totalWeight by remember { mutableIntStateOf(900) }
     var hydration by remember { mutableFloatStateOf(72f) }
     var salt by remember { mutableFloatStateOf(2.0f) }
     var yeast by remember { mutableFloatStateOf(0.8f) }
+
+    val dough = bakersBreakdown(totalWeight, hydration, salt, yeast)
 
     Column(
         modifier = modifier
@@ -69,7 +92,7 @@ fun RecipeScreen(
                 )
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    text = "white sandwich bread",
+                    text = "white sandwich loaf",
                     style = MaterialTheme.typography.titleLarge
                 )
             }
@@ -110,15 +133,18 @@ fun RecipeScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    StepperButton(isPlus = false)
-                    Text(
-                        text = "900",
-                        fontFamily = Bricolage,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 26.sp,
-                        color = MaterialTheme.colorScheme.onSurface
+                    StepperButton(
+                        isPlus = false,
+                        onClick = { totalWeight = (totalWeight - 50).coerceAtLeast(100) }
                     )
-                    StepperButton(isPlus = true)
+                    EditableWeight(
+                        value = totalWeight,
+                        onValueChange = { totalWeight = it }
+                    )
+                    StepperButton(
+                        isPlus = true,
+                        onClick = { totalWeight = (totalWeight + 50).coerceAtMost(5000) }
+                    )
                 }
             }
         }
@@ -163,16 +189,178 @@ fun RecipeScreen(
             bandLabel = "slow rise 0.4–1.0%",
             endLabel = "2.0%",
         )
+
+        Spacer(Modifier.height(16.dp))
+
+        ResultPanel(dough)
     }
 }
 
 @Composable
-private fun StepperButton(isPlus: Boolean) {
+private fun EditableWeight(
+    value: Int,
+    onValueChange: (Int) -> Unit,
+) {
+    var editing by remember { mutableStateOf(false) }
+    var text by remember { mutableStateOf(value.toString()) }
+    var hasBeenFocused by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(value, editing) {
+        if (!editing) text = value.toString()
+    }
+
+    fun commit() {
+        val parsed = text.toIntOrNull() ?: value
+        onValueChange(parsed.coerceIn(100, 5000))
+        editing = false
+    }
+
+    val numberStyle = TextStyle(
+        fontFamily = Bricolage,
+        fontWeight = FontWeight.Bold,
+        fontSize = 26.sp,
+        color = MaterialTheme.colorScheme.onSurface,
+        textAlign = TextAlign.Center,
+    )
+
+    if (editing) {
+        BasicTextField(
+            value = text,
+            onValueChange = { typed -> text = typed.filter { it.isDigit() }.take(4) },
+            textStyle = numberStyle,
+            singleLine = true,
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(onDone = {
+                commit()
+                focusManager.clearFocus()
+            }),
+            modifier = Modifier
+                .width(80.dp)
+                .focusRequester(focusRequester)
+                .onFocusChanged { state ->
+                    if (state.isFocused) hasBeenFocused = true
+                    else if (hasBeenFocused) commit()
+                }
+        )
+        LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    } else {
+        Text(
+            text = "$value",
+            style = numberStyle,
+            modifier = Modifier
+                .width(80.dp)
+                .clickable {
+                    text = value.toString()
+                    hasBeenFocused = false   // reset for this fresh edit
+                    editing = true
+                }
+        )
+    }
+}
+
+private data class DoughBreakdown(
+    val flour: Int,
+    val water: Int,
+    val salt: Int,
+    val yeast: Int,
+)
+
+/**
+ * Baker's percentages: flour is 100%, everything else is a percentage of it.
+ * flour = total ÷ (1 + hydration% + salt% + yeast%), then each weight is
+ * flour × its own percentage. Rounded to whole grams, so the four can sum to
+ * a gram or two off the target.
+ */
+private fun bakersBreakdown(
+    totalWeight: Int,
+    hydration: Float,
+    salt: Float,
+    yeast: Float,
+): DoughBreakdown {
+    val divisor = 1f + (hydration + salt + yeast) / 100f
+    val flour = totalWeight / divisor
+    return DoughBreakdown(
+        flour = flour.roundToInt(),
+        water = (flour * hydration / 100f).roundToInt(),
+        salt = (flour * salt / 100f).roundToInt(),
+        yeast = (flour * yeast / 100f).roundToInt(),
+    )
+}
+
+@Composable
+private fun ResultPanel(dough: DoughBreakdown) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Espresso)
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "your ingredients".uppercase(),
+            fontFamily = Hanken,
+            fontWeight = FontWeight.Bold,
+            fontSize = 12.sp,
+            letterSpacing = 0.08.em,
+            color = CreamHoney
+        )
+        Spacer(Modifier.height(10.dp))
+
+        val rows = listOf(
+            "flour" to dough.flour,
+            "water" to dough.water,
+            "salt" to dough.salt,
+            "yeast" to dough.yeast,
+        )
+        rows.forEachIndexed { index, (label, grams) ->
+            if (index > 0) {
+                HorizontalDivider(color = SurfaceCream.copy(alpha = 0.12f))
+            }
+            ResultRow(label, grams)
+        }
+    }
+}
+
+@Composable
+private fun ResultRow(label: String, grams: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 7.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            fontFamily = Hanken,
+            fontWeight = FontWeight.Normal,
+            fontSize = 15.sp,
+            color = CreamHoney
+        )
+        Text(
+            text = "$grams g",
+            fontFamily = Bricolage,
+            fontWeight = FontWeight.Bold,
+            fontSize = 17.sp,
+            color = SurfaceCream
+        )
+    }
+}
+
+@Composable
+private fun StepperButton(isPlus: Boolean, onClick: () -> Unit) {
     val markColor = MaterialTheme.colorScheme.primary
     Box(
         modifier = Modifier
             .size(36.dp)
             .clip(CircleShape)
+            .clickable(onClick = onClick)
             .border(1.5.dp, markColor, CircleShape),
         contentAlignment = Alignment.Center
     ) {
