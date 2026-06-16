@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import no.bylinnea.heve.ui.screens.JourneyScreen
 import no.bylinnea.heve.ui.screens.RecipeScreen
 import no.bylinnea.heve.ui.theme.HeveTheme
 
@@ -18,7 +19,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             HeveTheme {
-                RecipeScreen()
+                JourneyScreen()
             }
         }
     }
