@@ -1,5 +1,7 @@
 package no.bylinnea.heve.ui.screens
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -39,13 +41,17 @@ import no.bylinnea.heve.model.StepType
 import no.bylinnea.heve.model.sampleJourney
 import no.bylinnea.heve.ui.theme.Band
 import no.bylinnea.heve.ui.theme.Bricolage
+import no.bylinnea.heve.ui.theme.CreamHoney
 import no.bylinnea.heve.ui.theme.Espresso
 import no.bylinnea.heve.ui.theme.Hanken
 import no.bylinnea.heve.ui.theme.HeveTheme
 import no.bylinnea.heve.ui.theme.Honey
+import no.bylinnea.heve.ui.theme.SurfaceCream
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 private fun StepType.tint(): Color = when (this) {
     StepType.INGREDIENTS, StepType.BAKE -> Honey
@@ -69,6 +75,9 @@ fun JourneyScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = {
+            JourneySummary(totalMinutes = steps.sumOf { it.minutes })
+        },
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -145,6 +154,40 @@ private fun ReorderableCollectionItemScope.StepCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(end = 10.dp),
             )
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+private fun JourneySummary(totalMinutes: Int) {
+    val hours = totalMinutes / 60
+    val mins = totalMinutes % 60
+    val totalText = if (hours > 0) "$hours h $mins m" else "$mins m"
+    val readyBy = remember(totalMinutes) {
+        LocalTime.now().plusMinutes(totalMinutes.toLong())
+            .format(DateTimeFormatter.ofPattern("HH:mm"))
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 22.dp, vertical = 16.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Espresso)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column {
+            Text("total time", fontFamily = Hanken, fontSize = 12.sp, color = CreamHoney)
+            Text(totalText, fontFamily = Bricolage, fontWeight = FontWeight.Bold,
+                fontSize = 18.sp, color = SurfaceCream)
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text("ready by", fontFamily = Hanken, fontSize = 12.sp, color = CreamHoney)
+            Text("~$readyBy", fontFamily = Bricolage, fontWeight = FontWeight.Bold,
+                fontSize = 18.sp, color = SurfaceCream)
         }
     }
 }
