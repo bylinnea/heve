@@ -11,7 +11,7 @@ enum class StepType(
     FOLD("stretch & fold", hasDuration = false, defaultMinutes = 0),
     PRESHAPE("preshape", hasDuration = false, defaultMinutes = 0),
     SHAPE("shape", hasDuration = false, defaultMinutes = 0),
-    BAKE("bake", hasDuration = true, defaultMinutes = 35),
+    BAKE("bake", hasDuration = true, defaultMinutes = 45),
 }
 
 data class JourneyStep(

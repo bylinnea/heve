@@ -1,5 +1,6 @@
 package no.bylinnea.heve.ui.screens
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -13,15 +14,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -36,6 +43,9 @@ import no.bylinnea.heve.ui.theme.Espresso
 import no.bylinnea.heve.ui.theme.Hanken
 import no.bylinnea.heve.ui.theme.HeveTheme
 import no.bylinnea.heve.ui.theme.Honey
+import sh.calvin.reorderable.ReorderableCollectionItemScope
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 private fun StepType.tint(): Color = when (this) {
     StepType.INGREDIENTS, StepType.BAKE -> Honey
@@ -46,48 +56,70 @@ private fun StepType.tint(): Color = when (this) {
 @Composable
 fun JourneyScreen(
     modifier: Modifier = Modifier,
-    steps: List<JourneyStep> = sampleJourney,
 ) {
+    var steps by remember { mutableStateOf(sampleJourney) }
+
+    val lazyListState = rememberLazyListState()
+    val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
+        steps = steps.toMutableList().apply {
+            add(to.index, removeAt(from.index))
+        }
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding() + 16.dp,
-                bottom = innerPadding.calculateBottomPadding() + 16.dp,
-                start = 22.dp,
-                end = 22.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
-            item {
-                Text(
-                    text = "build your bake",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 8.dp),
-                )
-            }
-            items(steps, key = { it.id }) { step ->
-                StepCard(step)
+            Text(
+                text = "build your bake",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 16.dp, bottom = 8.dp),
+            )
+            LazyColumn(
+                state = lazyListState,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentPadding = PaddingValues(start = 22.dp, end = 22.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(steps, key = { it.id }) { step ->
+                    ReorderableItem(reorderableState, key = step.id) { isDragging ->
+                        StepCard(
+                            step = step,
+                            isDragging = isDragging
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun StepCard(step: JourneyStep) {
+private fun ReorderableCollectionItemScope.StepCard(
+    step: JourneyStep,
+    isDragging: Boolean,
+) {
+    val shape = RoundedCornerShape(12.dp)
+    val elevation by animateDpAsState(if (isDragging) 6.dp else 0.dp, label = "elevation")
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .draggableHandle()
+            .shadow(elevation, shape)
+            .clip(shape)
             .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
-            .padding(12.dp),
+            .border(1.dp, MaterialTheme.colorScheme.outline, shape)
+            .padding(vertical = 10.dp, horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // colour dot standing in for the step icon (real icons later)
         Box(
             modifier = Modifier
                 .size(28.dp)
@@ -111,6 +143,7 @@ private fun StepCard(step: JourneyStep) {
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 10.dp),
             )
         }
     }
