@@ -4,7 +4,7 @@ enum class StepType(
     val label: String,
     val hasDuration: Boolean,
     val defaultMinutes: Int,
-    val stepMinutes: Int,        // how much one +/- tap changes it
+    val stepMinutes: Int,
 ) {
     INGREDIENTS("add ingredients", hasDuration = false, defaultMinutes = 0, stepMinutes = 0),
     KNEAD("knead", hasDuration = true, defaultMinutes = 8, stepMinutes = 1),
@@ -12,7 +12,14 @@ enum class StepType(
     FOLD("stretch & fold", hasDuration = false, defaultMinutes = 0, stepMinutes = 0),
     PRESHAPE("preshape", hasDuration = false, defaultMinutes = 0, stepMinutes = 0),
     SHAPE("shape", hasDuration = false, defaultMinutes = 0, stepMinutes = 0),
-    BAKE("bake", hasDuration = true, defaultMinutes = 45, stepMinutes = 1),
+    BAKE("bake", hasDuration = true, defaultMinutes = 45, stepMinutes = 1);
+
+    val shortLabel: String
+        get() = when (this) {
+            FOLD -> "fold"
+            INGREDIENTS -> "ingredients"
+            else -> label
+        }
 }
 
 data class JourneyStep(

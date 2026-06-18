@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -63,6 +64,11 @@ private fun StepType.tint(): Color = when (this) {
     else -> Espresso
 }
 
+private val paletteTypes = listOf(
+    StepType.KNEAD, StepType.PROOF, StepType.FOLD,
+    StepType.PRESHAPE, StepType.SHAPE, StepType.BAKE,
+)
+
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun JourneyScreen(
@@ -104,6 +110,10 @@ fun JourneyScreen(
                     val newId = (steps.maxOfOrNull { it.id } ?: 0L) + 1
                     steps = steps + JourneyStep(newId, type)
                 },
+            )
+            SectionHeader(
+                text = "your sequence",
+                modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 8.dp, bottom = 8.dp),
             )
             LazyColumn(
                 state = lazyListState,
@@ -217,30 +227,34 @@ private fun JourneySummary(totalMinutes: Int) {
     val hours = totalMinutes / 60
     val mins = totalMinutes % 60
     val totalText = if (hours > 0) "$hours h $mins m" else "$mins m"
-    val readyBy = remember(totalMinutes) {
-        LocalTime.now().plusMinutes(totalMinutes.toLong())
-            .format(DateTimeFormatter.ofPattern("HH:mm"))
-    }
+
+    val now = remember(totalMinutes) { LocalTime.now() }
+    val fmt = remember { DateTimeFormatter.ofPattern("HH:mm") }
+    val startText = now.format(fmt)
+    val readyText = now.plusMinutes(totalMinutes.toLong()).format(fmt)
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 22.dp, vertical = 16.dp)
-            .clip(RoundedCornerShape(14.dp))
             .background(Espresso)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .navigationBarsPadding()
+            .padding(horizontal = 22.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Bottom,
     ) {
         Column {
             Text("total time", fontFamily = Hanken, fontSize = 12.sp, color = CreamHoney)
             Text(totalText, fontFamily = Bricolage, fontWeight = FontWeight.Bold,
-                fontSize = 18.sp, color = SurfaceCream)
+                fontSize = 20.sp, color = SurfaceCream)
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text("ready by", fontFamily = Hanken, fontSize = 12.sp, color = CreamHoney)
-            Text("~$readyBy", fontFamily = Bricolage, fontWeight = FontWeight.Bold,
-                fontSize = 18.sp, color = SurfaceCream)
+            Text("start $startText", fontFamily = Hanken, fontSize = 12.sp, color = CreamHoney)
+            Row(verticalAlignment = Alignment.CenterVertically){
+                Text("ready by ", fontFamily = Hanken, fontSize = 14.sp, color = SurfaceCream)
+                Text("$readyText", fontFamily = Bricolage, fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp, color = SurfaceCream)
+            }
+
         }
     }
 }
@@ -252,36 +266,45 @@ private fun StepPalette(
 ) {
     FlowRow(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        maxItemsInEachRow = 3,
     ) {
-        StepType.entries.forEach { type ->
-            StepChip(type = type, onClick = { onAdd(type) })
+        paletteTypes.forEach { type ->
+            StepPaletteCard(
+                type = type,
+                modifier = Modifier.weight(1f),
+                onClick = { onAdd(type) },
+            )
         }
     }
 }
 
 @Composable
-private fun StepChip(type: StepType, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(10.dp)
-    Row(
-        modifier = Modifier
+private fun StepPaletteCard(
+    type: StepType,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(14.dp)
+    Column(
+        modifier = modifier
             .clip(shape)
             .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, MaterialTheme.colorScheme.outline, shape)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(vertical = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(
             modifier = Modifier
-                .size(10.dp)
-                .clip(CircleShape)
+                .size(34.dp)
+                .clip(RoundedCornerShape(9.dp))
                 .background(type.tint())
         )
         Text(
-            text = type.label,
+            text = type.shortLabel,
             fontFamily = Hanken,
             fontWeight = FontWeight.Medium,
             fontSize = 13.sp,
