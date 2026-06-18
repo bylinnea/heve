@@ -117,7 +117,12 @@ fun JourneyScreen(
                     ReorderableItem(reorderableState, key = step.id) { isDragging ->
                         StepCard(
                             step = step,
-                            isDragging = isDragging
+                            isDragging = isDragging,
+                            onMinutesChange = { newMinutes ->
+                                steps = steps.map {
+                                    if (it.id == step.id) it.copy(minutes = newMinutes) else it
+                                }
+                            },
                         )
                     }
                 }
@@ -130,6 +135,7 @@ fun JourneyScreen(
 private fun ReorderableCollectionItemScope.StepCard(
     step: JourneyStep,
     isDragging: Boolean,
+    onMinutesChange: (Int) -> Unit,
 ) {
     val shape = RoundedCornerShape(12.dp)
     val elevation by animateDpAsState(if (isDragging) 6.dp else 0.dp, label = "elevation")
@@ -162,19 +168,50 @@ private fun ReorderableCollectionItemScope.StepCard(
                 .padding(start = 12.dp),
         )
         if (step.type.hasDuration) {
-            Text(
-                text = "${step.minutes} min",
-                fontFamily = Bricolage,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(end = 10.dp),
+            MinutesStepper(
+                minutes = step.minutes,
+                stepMinutes = step.type.stepMinutes,
+                onChange = onMinutesChange,
             )
         }
     }
 }
+@Composable
+private fun MinutesStepper(minutes: Int, stepMinutes: Int, onChange: (Int) -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.padding(end = 6.dp),
+    ) {
+        MiniStepButton(isPlus = false) { onChange((minutes - stepMinutes).coerceAtLeast(1)) }
+        Text(
+            text = "$minutes min",
+            fontFamily = Bricolage,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        MiniStepButton(isPlus = true) { onChange((minutes + stepMinutes).coerceAtMost(600)) }
+    }
+}
 
-@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+private fun MiniStepButton(isPlus: Boolean, onClick: () -> Unit) {
+    val c = MaterialTheme.colorScheme.primary
+    Box(
+        modifier = Modifier
+            .size(26.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick)
+            .border(1.5.dp, c, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(Modifier.size(width = 8.dp, height = 2.dp).clip(RoundedCornerShape(1.dp)).background(c))
+        if (isPlus) {
+            Box(Modifier.size(width = 2.dp, height = 8.dp).clip(RoundedCornerShape(1.dp)).background(c))
+        }
+    }
+}
 @Composable
 private fun JourneySummary(totalMinutes: Int) {
     val hours = totalMinutes / 60
@@ -253,7 +290,6 @@ private fun StepChip(type: StepType, onClick: () -> Unit) {
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun JourneyScreenPreview() {

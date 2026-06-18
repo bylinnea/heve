@@ -4,14 +4,15 @@ enum class StepType(
     val label: String,
     val hasDuration: Boolean,
     val defaultMinutes: Int,
+    val stepMinutes: Int,        // how much one +/- tap changes it
 ) {
-    INGREDIENTS("add ingredients", hasDuration = false, defaultMinutes = 0),
-    KNEAD("knead", hasDuration = true, defaultMinutes = 8),
-    PROOF("proof", hasDuration = true, defaultMinutes = 45),
-    FOLD("stretch & fold", hasDuration = false, defaultMinutes = 0),
-    PRESHAPE("preshape", hasDuration = false, defaultMinutes = 0),
-    SHAPE("shape", hasDuration = false, defaultMinutes = 0),
-    BAKE("bake", hasDuration = true, defaultMinutes = 45),
+    INGREDIENTS("add ingredients", hasDuration = false, defaultMinutes = 0, stepMinutes = 0),
+    KNEAD("knead", hasDuration = true, defaultMinutes = 8, stepMinutes = 1),
+    PROOF("proof", hasDuration = true, defaultMinutes = 45, stepMinutes = 5),
+    FOLD("stretch & fold", hasDuration = false, defaultMinutes = 0, stepMinutes = 0),
+    PRESHAPE("preshape", hasDuration = false, defaultMinutes = 0, stepMinutes = 0),
+    SHAPE("shape", hasDuration = false, defaultMinutes = 0, stepMinutes = 0),
+    BAKE("bake", hasDuration = true, defaultMinutes = 45, stepMinutes = 1),
 }
 
 data class JourneyStep(
