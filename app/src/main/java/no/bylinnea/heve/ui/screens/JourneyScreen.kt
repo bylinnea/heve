@@ -1,7 +1,5 @@
 package no.bylinnea.heve.ui.screens
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -108,25 +106,7 @@ fun JourneyScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 22.dp, end = 22.dp, top = 16.dp, bottom = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                Text(
-                    text = "build your bake",
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                Text(
-                    text = "${steps.size} steps",
-                    fontFamily = Hanken,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            JourneyHeader(stepCount = steps.size)
             SectionHeader(
                 text = "add a step",
                 modifier = Modifier.padding(start = 22.dp, end = 22.dp, bottom = 8.dp),
@@ -173,7 +153,25 @@ fun JourneyScreen(
         )
     }
 }
-
+@Composable
+private fun JourneyHeader(stepCount: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 22.dp, end = 22.dp, top = 16.dp, bottom = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Text("build your bake", style = MaterialTheme.typography.titleLarge)
+        Text(
+            text = if (stepCount == 1) "1 step" else "$stepCount steps",
+            fontFamily = Hanken,
+            fontWeight = FontWeight.Medium,
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
 @Composable
 private fun ReorderableCollectionItemScope.StepCard(
     step: JourneyStep,
@@ -259,7 +257,6 @@ private fun DragBars() {
         }
     }
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DurationEditSheet(
@@ -325,14 +322,9 @@ private fun MiniStepButton(isPlus: Boolean, onClick: () -> Unit) {
 }
 @Composable
 private fun JourneySummary(totalMinutes: Int) {
-    val hours = totalMinutes / 60
-    val mins = totalMinutes % 60
-    val totalText = if (hours > 0) "$hours h $mins m" else "$mins m"
-
-    val now = remember(totalMinutes) { LocalTime.now() }
+    val start = remember { LocalTime.now() }     // fixed at open, doesn't jump
     val fmt = remember { DateTimeFormatter.ofPattern("HH:mm") }
-    val startText = now.format(fmt)
-    val readyText = now.plusMinutes(totalMinutes.toLong()).format(fmt)
+    val readyText = start.plusMinutes(totalMinutes.toLong()).format(fmt)
 
     Row(
         modifier = Modifier
@@ -345,17 +337,16 @@ private fun JourneySummary(totalMinutes: Int) {
     ) {
         Column {
             Text("total time", fontFamily = Hanken, fontSize = 12.sp, color = CreamHoney)
-            Text(totalText, fontFamily = Bricolage, fontWeight = FontWeight.Bold,
-                fontSize = 20.sp, color = SurfaceCream)
+            Text(formatMinutes(totalMinutes), fontFamily = Bricolage,
+                fontWeight = FontWeight.Bold, fontSize = 20.sp, color = SurfaceCream)
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text("start $startText", fontFamily = Hanken, fontSize = 12.sp, color = CreamHoney)
-            Row(verticalAlignment = Alignment.CenterVertically){
+            Text("start ${start.format(fmt)}", fontFamily = Hanken, fontSize = 12.sp, color = CreamHoney)
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("ready by ", fontFamily = Hanken, fontSize = 14.sp, color = SurfaceCream)
-                Text("$readyText", fontFamily = Bricolage, fontWeight = FontWeight.Bold,
+                Text(readyText, fontFamily = Bricolage, fontWeight = FontWeight.Bold,
                     fontSize = 20.sp, color = SurfaceCream)
             }
-
         }
     }
 }
@@ -380,7 +371,6 @@ private fun StepPalette(
         }
     }
 }
-
 @Composable
 private fun StepPaletteCard(
     type: StepType,
