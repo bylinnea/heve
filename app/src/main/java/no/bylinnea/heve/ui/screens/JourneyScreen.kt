@@ -57,11 +57,23 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import no.bylinnea.heve.ui.theme.Muted
 
 private fun StepType.tint(): Color = when (this) {
     StepType.INGREDIENTS, StepType.BAKE -> Honey
     StepType.PROOF -> Band
     else -> Espresso
+}
+private fun formatMinutes(total: Int): String {
+    val h = total / 60
+    val m = total % 60
+    return when {
+        h > 0 && m > 0 -> "$h h $m min"
+        h > 0 -> "$h h"
+        else -> "$m min"
+    }
 }
 
 private val paletteTypes = listOf(
@@ -74,6 +86,8 @@ fun JourneyScreen(
     modifier: Modifier = Modifier,
 ) {
     var steps by remember { mutableStateOf(sampleJourney) }
+    var editingStepId by remember { mutableStateOf<Long?>(null) }
+    val editingStep = steps.firstOrNull { it.id == editingStepId }
 
     val lazyListState = rememberLazyListState()
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
@@ -141,16 +155,22 @@ fun JourneyScreen(
                         StepCard(
                             step = step,
                             isDragging = isDragging,
-                            onMinutesChange = { newMinutes ->
-                                steps = steps.map {
-                                    if (it.id == step.id) it.copy(minutes = newMinutes) else it
-                                }
-                            },
+                            onClick = { editingStepId = step.id },
+                            onDelete = { steps = steps.filterNot { it.id == step.id } },
                         )
                     }
                 }
             }
         }
+    }
+    if (editingStep != null) {
+        DurationEditSheet(
+            step = editingStep,
+            onMinutesChange = { newMin ->
+                steps = steps.map { if (it.id == editingStep.id) it.copy(minutes = newMin) else it }
+            },
+            onDismiss = { editingStepId = null },
+        )
     }
 }
 
@@ -158,7 +178,8 @@ fun JourneyScreen(
 private fun ReorderableCollectionItemScope.StepCard(
     step: JourneyStep,
     isDragging: Boolean,
-    onMinutesChange: (Int) -> Unit,
+    onClick: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val shape = RoundedCornerShape(12.dp)
     val elevation by animateDpAsState(if (isDragging) 6.dp else 0.dp, label = "elevation")
@@ -166,58 +187,125 @@ private fun ReorderableCollectionItemScope.StepCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .draggableHandle()
             .shadow(elevation, shape)
             .clip(shape)
             .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, MaterialTheme.colorScheme.outline, shape)
-            .padding(vertical = 10.dp, horizontal = 14.dp),
+            .padding(vertical = 8.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
+            modifier = Modifier.draggableHandle().size(40.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            DragBars()
+        }
+        Box(
             modifier = Modifier
-                .size(28.dp)
-                .clip(CircleShape)
+                .size(32.dp)
+                .clip(RoundedCornerShape(9.dp))
                 .background(step.type.tint())
         )
-        Text(
-            text = step.type.label,
-            fontFamily = Hanken,
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
-            color = MaterialTheme.colorScheme.onSurface,
+        Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(start = 12.dp),
-        )
-        if (step.type.hasDuration) {
-            MinutesStepper(
-                minutes = step.minutes,
-                stepMinutes = step.type.stepMinutes,
-                onChange = onMinutesChange,
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(enabled = step.type.hasDuration, onClick = onClick)
+                .padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
+        ) {
+            Text(
+                text = step.type.label,
+                fontFamily = Hanken,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            if (step.type.hasDuration) {
+                Text(
+                    text = formatMinutes(step.minutes),
+                    fontFamily = Hanken,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .clickable(onClick = onDelete),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "×",
+                fontFamily = Hanken,
+                fontSize = 20.sp,
+                color = Muted,
             )
         }
     }
 }
 @Composable
-private fun MinutesStepper(minutes: Int, stepMinutes: Int, onChange: (Int) -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = Modifier.padding(end = 6.dp),
-    ) {
-        MiniStepButton(isPlus = false) { onChange((minutes - stepMinutes).coerceAtLeast(1)) }
-        Text(
-            text = "$minutes min",
-            fontFamily = Bricolage,
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        MiniStepButton(isPlus = true) { onChange((minutes + stepMinutes).coerceAtMost(600)) }
+private fun DragBars() {
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        repeat(3) {
+            Box(
+                modifier = Modifier
+                    .size(width = 16.dp, height = 2.dp)
+                    .clip(RoundedCornerShape(1.dp))
+                    .background(Muted)
+            )
+        }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DurationEditSheet(
+    step: JourneyStep,
+    onMinutesChange: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 22.dp, end = 22.dp, bottom = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            Text(
+                text = step.type.label,
+                fontFamily = Hanken,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                MiniStepButton(isPlus = false) {
+                    onMinutesChange((step.minutes - step.type.stepMinutes).coerceAtLeast(1))
+                }
+                Text(
+                    text = "${step.minutes} min",
+                    fontFamily = Bricolage,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 32.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                MiniStepButton(isPlus = true) {
+                    onMinutesChange((step.minutes + step.type.stepMinutes).coerceAtMost(600))
+                }
+            }
+        }
+    }
+}
 @Composable
 private fun MiniStepButton(isPlus: Boolean, onClick: () -> Unit) {
     val c = MaterialTheme.colorScheme.primary
