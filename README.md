@@ -31,8 +31,8 @@ Early development - building it out screen by screen.
 
 - [x] Theme foundation
 - [x] Shared UI components
-- [ ] Recipe screen + baker's percentage calculator
+- [X] Recipe screen + baker's percentage calculator
 - [ ] Dough journey builder (drag to reorder)
-- [ ] Library
 - [ ] Live bake guide
 - [ ] Persistence + timers
+- [ ] Library
