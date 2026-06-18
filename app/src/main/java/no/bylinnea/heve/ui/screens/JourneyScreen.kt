@@ -5,9 +5,12 @@ import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import no.bylinnea.heve.model.JourneyStep
 import no.bylinnea.heve.model.StepType
 import no.bylinnea.heve.model.sampleJourney
+import no.bylinnea.heve.ui.components.SectionHeader
 import no.bylinnea.heve.ui.theme.Band
 import no.bylinnea.heve.ui.theme.Bricolage
 import no.bylinnea.heve.ui.theme.CreamHoney
@@ -59,6 +63,7 @@ private fun StepType.tint(): Color = when (this) {
     else -> Espresso
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun JourneyScreen(
     modifier: Modifier = Modifier,
@@ -88,6 +93,17 @@ fun JourneyScreen(
                 text = "build your bake",
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 16.dp, bottom = 8.dp),
+            )
+            SectionHeader(
+                text = "add a step",
+                modifier = Modifier.padding(start = 22.dp, end = 22.dp, bottom = 8.dp),
+            )
+            StepPalette(
+                modifier = Modifier.padding(start = 22.dp, end = 22.dp, bottom = 16.dp),
+                onAdd = { type ->
+                    val newId = (steps.maxOfOrNull { it.id } ?: 0L) + 1
+                    steps = steps + JourneyStep(newId, type)
+                },
             )
             LazyColumn(
                 state = lazyListState,
@@ -191,7 +207,53 @@ private fun JourneySummary(totalMinutes: Int) {
         }
     }
 }
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun StepPalette(
+    onAdd: (StepType) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    FlowRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        StepType.entries.forEach { type ->
+            StepChip(type = type, onClick = { onAdd(type) })
+        }
+    }
+}
 
+@Composable
+private fun StepChip(type: StepType, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(10.dp)
+    Row(
+        modifier = Modifier
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline, shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(type.tint())
+        )
+        Text(
+            text = type.label,
+            fontFamily = Hanken,
+            fontWeight = FontWeight.Medium,
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun JourneyScreenPreview() {
