@@ -69,7 +69,6 @@ private val paletteTypes = listOf(
     StepType.PRESHAPE, StepType.SHAPE, StepType.BAKE,
 )
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun JourneyScreen(
     modifier: Modifier = Modifier,
@@ -95,11 +94,25 @@ fun JourneyScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            Text(
-                text = "build your bake",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 16.dp, bottom = 8.dp),
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 22.dp, end = 22.dp, top = 16.dp, bottom = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                Text(
+                    text = "build your bake",
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Text(
+                    text = "${steps.size} steps",
+                    fontFamily = Hanken,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             SectionHeader(
                 text = "add a step",
                 modifier = Modifier.padding(start = 22.dp, end = 22.dp, bottom = 8.dp),
