@@ -74,11 +74,8 @@ fun IngredientSlider(
             )
         }
 
-        Spacer(Modifier.height(8.dp))
-
         val min = valueRange.start
         val max = valueRange.endInclusive
-        // M3's `steps` counts the gaps BETWEEN endpoints, so it's (span / step) − 1.
         val steps = remember(min, max, step) {
             (((max - min) / step).roundToInt() - 1).coerceAtLeast(0)
         }
@@ -104,7 +101,7 @@ fun IngredientSlider(
                         .height(8.dp)
                 ) {
                     val cy = size.height / 2f
-                    val inset = 13.dp.toPx()              // half the 26dp thumb
+                    val inset = 13.dp.toPx()
                     val usable = size.width - inset * 2f
                     fun x(v: Float) = inset + ((v - min) / (max - min)) * usable
                     drawLine(
@@ -123,14 +120,12 @@ fun IngredientSlider(
             }
         )
 
-        Spacer(Modifier.height(4.dp))
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             CaptionText(startLabel, Muted)
-            CaptionText(bandLabel, MaterialTheme.colorScheme.onSurfaceVariant) // emphasised
+            CaptionText(bandLabel, MaterialTheme.colorScheme.onSurfaceVariant)
             CaptionText(endLabel, Muted)
         }
     }

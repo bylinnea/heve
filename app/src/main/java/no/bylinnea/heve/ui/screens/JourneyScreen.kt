@@ -57,6 +57,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
+import no.bylinnea.heve.ui.components.CircleStepButton
 import no.bylinnea.heve.ui.theme.Muted
 
 private fun StepType.tint(): Color = when (this) {
@@ -200,7 +201,7 @@ private fun ReorderableCollectionItemScope.StepCard(
         }
         Box(
             modifier = Modifier
-                .size(32.dp)
+                .size(28.dp)
                 .clip(RoundedCornerShape(9.dp))
                 .background(step.type.tint())
         )
@@ -286,9 +287,9 @@ private fun DurationEditSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                MiniStepButton(isPlus = false) {
+                CircleStepButton(isPlus = false, size = 26.dp, onClick = {
                     onMinutesChange((step.minutes - step.type.stepMinutes).coerceAtLeast(1))
-                }
+                })
                 Text(
                     text = "${step.minutes} min",
                     fontFamily = Bricolage,
@@ -296,27 +297,10 @@ private fun DurationEditSheet(
                     fontSize = 32.sp,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                MiniStepButton(isPlus = true) {
+                CircleStepButton(isPlus = true, size = 26.dp, onClick = {
                     onMinutesChange((step.minutes + step.type.stepMinutes).coerceAtMost(600))
-                }
+                })
             }
-        }
-    }
-}
-@Composable
-private fun MiniStepButton(isPlus: Boolean, onClick: () -> Unit) {
-    val c = MaterialTheme.colorScheme.primary
-    Box(
-        modifier = Modifier
-            .size(26.dp)
-            .clip(CircleShape)
-            .clickable(onClick = onClick)
-            .border(1.5.dp, c, CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(Modifier.size(width = 8.dp, height = 2.dp).clip(RoundedCornerShape(1.dp)).background(c))
-        if (isPlus) {
-            Box(Modifier.size(width = 2.dp, height = 8.dp).clip(RoundedCornerShape(1.dp)).background(c))
         }
     }
 }
@@ -386,11 +370,10 @@ private fun StepPaletteCard(
             .clickable(onClick = onClick)
             .padding(vertical = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(
             modifier = Modifier
-                .size(34.dp)
+                .size(28.dp)
                 .clip(RoundedCornerShape(9.dp))
                 .background(type.tint())
         )

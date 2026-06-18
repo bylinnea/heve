@@ -1,7 +1,6 @@
 package no.bylinnea.heve.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -51,6 +49,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import no.bylinnea.heve.ui.components.CircleStepButton
 import no.bylinnea.heve.ui.components.HeveCard
 import no.bylinnea.heve.ui.components.IngredientSlider
 import no.bylinnea.heve.ui.theme.Bricolage
@@ -117,7 +116,7 @@ fun RecipeScreen(
                     )
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        text = "country sourdough",
+                        text = "white sandwich loaf",
                         style = MaterialTheme.typography.titleLarge
                     )
                 }
@@ -155,9 +154,9 @@ fun RecipeScreen(
                     }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        StepperButton(
+                        CircleStepButton(
                             isPlus = false,
                             onClick = { totalWeight = (totalWeight - 50).coerceAtLeast(100) }
                         )
@@ -165,7 +164,7 @@ fun RecipeScreen(
                             value = totalWeight,
                             onValueChange = { totalWeight = it }
                         )
-                        StepperButton(
+                        CircleStepButton(
                             isPlus = true,
                             onClick = { totalWeight = (totalWeight + 50).coerceAtMost(5000) }
                         )
@@ -185,6 +184,7 @@ fun RecipeScreen(
                 bandLabel = "rustic 65–80%",
                 endLabel = "100%",
             )
+            Spacer(Modifier.height(12.dp))
             IngredientSlider(
                 label = "salt",
                 valueText = String.format(Locale.US, "%.1f%%", salt),
@@ -197,6 +197,7 @@ fun RecipeScreen(
                 bandLabel = "typical 1.8–2.2%",
                 endLabel = "2.6%",
             )
+            Spacer(Modifier.height(12.dp))
             IngredientSlider(
                 label = "yeast",
                 valueText = String.format(Locale.US, "%.1f%%", yeast),
@@ -282,7 +283,6 @@ private fun EditableWeight(
         )
     }
 }
-
 private data class DoughBreakdown(
     val flour: Int,
     val water: Int,
@@ -311,7 +311,6 @@ private fun bakersBreakdown(
         yeast = (flour * yeast / 100f).roundToInt(),
     )
 }
-
 @Composable
 private fun ResultPanel(dough: DoughBreakdown) {
     Column(
@@ -322,7 +321,7 @@ private fun ResultPanel(dough: DoughBreakdown) {
             .padding(16.dp)
     ) {
         Text(
-            text = "your ingredients".uppercase(),
+            text = "your dough".uppercase(),
             fontFamily = Hanken,
             fontWeight = FontWeight.Bold,
             fontSize = 12.sp,
@@ -345,7 +344,6 @@ private fun ResultPanel(dough: DoughBreakdown) {
         }
     }
 }
-
 @Composable
 private fun ResultRow(label: String, grams: Int) {
     Row(
@@ -369,34 +367,6 @@ private fun ResultRow(label: String, grams: Int) {
             fontSize = 17.sp,
             color = SurfaceCream
         )
-    }
-}
-
-@Composable
-private fun StepperButton(isPlus: Boolean, onClick: () -> Unit) {
-    val markColor = MaterialTheme.colorScheme.primary
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .clip(CircleShape)
-            .clickable(onClick = onClick)
-            .border(1.5.dp, markColor, CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .size(width = 10.dp, height = 2.dp)
-                .clip(RoundedCornerShape(1.dp))
-                .background(markColor)
-        )
-        if (isPlus) {
-            Box(
-                modifier = Modifier
-                    .size(width = 2.dp, height = 10.dp)
-                    .clip(RoundedCornerShape(1.dp))
-                    .background(markColor)
-            )
-        }
     }
 }
 
