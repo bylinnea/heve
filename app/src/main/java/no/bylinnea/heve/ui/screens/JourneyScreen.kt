@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -25,10 +27,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -83,8 +87,11 @@ private val paletteTypes = listOf(
 @Composable
 fun JourneyScreen(
     modifier: Modifier = Modifier,
+    initialSteps: List<JourneyStep> = emptyList(),
+    onSave: (steps: List<JourneyStep>) -> Unit = {},
+    onStartBake: (steps: List<JourneyStep>) -> Unit = {},
 ) {
-    var steps by remember { mutableStateOf(sampleJourney) }
+    var steps by remember { mutableStateOf(initialSteps.ifEmpty { sampleJourney }) }
     var editingStepId by remember { mutableStateOf<Long?>(null) }
     val editingStep = steps.firstOrNull { it.id == editingStepId }
 
@@ -99,7 +106,11 @@ fun JourneyScreen(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            JourneySummary(totalMinutes = steps.sumOf { it.minutes })
+            JourneySummary(
+                totalMinutes = steps.sumOf { it.minutes },
+                onSave = { onSave(steps) },
+                onStartBake = { onStartBake(steps) },
+            )
         },
     ) { innerPadding ->
         Column(
@@ -305,31 +316,82 @@ private fun DurationEditSheet(
     }
 }
 @Composable
-private fun JourneySummary(totalMinutes: Int) {
-    val start = remember { LocalTime.now() }     // fixed at open, doesn't jump
+private fun JourneySummary(
+    totalMinutes: Int,
+    onSave: () -> Unit = {},
+    onStartBake: () -> Unit = {},
+) {
+    val start = remember { LocalTime.now() }
     val fmt = remember { DateTimeFormatter.ofPattern("HH:mm") }
     val readyText = start.plusMinutes(totalMinutes.toLong()).format(fmt)
+    var saved by remember { mutableStateOf(false) }
 
-    Row(
+    LaunchedEffect(saved) {
+        if (saved) {
+            delay(2000)
+            saved = false
+        }
+    }
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(Espresso)
             .navigationBarsPadding()
             .padding(horizontal = 22.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Bottom,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column {
-            Text("total time", fontFamily = Hanken, fontSize = 12.sp, color = CreamHoney)
-            Text(formatMinutes(totalMinutes), fontFamily = Bricolage,
-                fontWeight = FontWeight.Bold, fontSize = 20.sp, color = SurfaceCream)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            Column {
+                Text("total time", fontFamily = Hanken, fontSize = 12.sp, color = CreamHoney)
+                Text(
+                    formatMinutes(totalMinutes), fontFamily = Bricolage,
+                    fontWeight = FontWeight.Bold, fontSize = 20.sp, color = SurfaceCream,
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text("start ${start.format(fmt)}", fontFamily = Hanken, fontSize = 12.sp, color = CreamHoney)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("ready by ", fontFamily = Hanken, fontSize = 14.sp, color = SurfaceCream)
+                    Text(
+                        readyText, fontFamily = Bricolage, fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp, color = SurfaceCream,
+                    )
+                }
+            }
         }
-        Column(horizontalAlignment = Alignment.End) {
-            Text("start ${start.format(fmt)}", fontFamily = Hanken, fontSize = 12.sp, color = CreamHoney)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("ready by ", fontFamily = Hanken, fontSize = 14.sp, color = SurfaceCream)
-                Text(readyText, fontFamily = Bricolage, fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp, color = SurfaceCream)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (saved) Honey.copy(alpha = 0.3f) else SurfaceCream.copy(alpha = 0.12f))
+                    .clickable(enabled = !saved) { saved = true; onSave() }
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    if (saved) "saved ✓" else "save",
+                    fontFamily = Hanken, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = SurfaceCream,
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .weight(2f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Honey)
+                    .clickable(onClick = onStartBake)
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("start bake", fontFamily = Hanken, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = SurfaceCream)
             }
         }
     }

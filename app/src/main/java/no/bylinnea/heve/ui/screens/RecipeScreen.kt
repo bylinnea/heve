@@ -64,14 +64,20 @@ import kotlin.math.roundToInt
 @Composable
 fun RecipeScreen(
     modifier: Modifier = Modifier,
-    onNext: () -> Unit = {},
+    name: String = "new recipe",
+    initialTotalWeight: Int = 900,
+    initialHydration: Int = 72,
+    initialSalt: Float = 2.0f,
+    initialYeast: Float = 0.8f,
+    onNext: (totalWeight: Int, hydrationPct: Int, salt: Float, yeast: Float) -> Unit = { _, _, _, _ -> },
 ) {
-    var totalWeight by remember { mutableIntStateOf(900) }
-    var hydration by remember { mutableFloatStateOf(72f) }
-    var salt by remember { mutableFloatStateOf(2.0f) }
-    var yeast by remember { mutableFloatStateOf(0.8f) }
+    var totalWeight by remember(initialTotalWeight) { mutableIntStateOf(initialTotalWeight) }
+    var hydration by remember(initialHydration) { mutableFloatStateOf(initialHydration.toFloat()) }
+    var salt by remember(initialSalt) { mutableFloatStateOf(initialSalt) }
+    var yeast by remember(initialYeast) { mutableFloatStateOf(initialYeast) }
 
     val dough = bakersBreakdown(totalWeight, hydration, salt, yeast)
+    val focusManager = LocalFocusManager.current
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -79,7 +85,10 @@ fun RecipeScreen(
         bottomBar = {
             Box(Modifier.padding(horizontal = 22.dp, vertical = 16.dp)) {
                 Button(
-                    onClick = onNext,
+                    onClick = {
+                        focusManager.clearFocus()
+                        onNext(totalWeight, hydration.roundToInt(), salt, yeast)
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
@@ -104,28 +113,18 @@ fun RecipeScreen(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Espresso)
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        text = "white sandwich loaf",
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                }
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Espresso)
+                )
+                Spacer(Modifier.width(10.dp))
                 Text(
-                    text = "save",
-                    fontFamily = Hanken,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp,
-                    color = MaterialTheme.colorScheme.primary
+                    text = name,
+                    style = MaterialTheme.typography.titleLarge
                 )
             }
             Spacer(Modifier.height(20.dp))
@@ -277,7 +276,7 @@ private fun EditableWeight(
                 .width(80.dp)
                 .clickable {
                     text = value.toString()
-                    hasBeenFocused = false   // reset for this fresh edit
+                    hasBeenFocused = false
                     editing = true
                 }
         )

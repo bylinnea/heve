@@ -21,8 +21,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -63,14 +65,18 @@ private fun formatTime(seconds: Int): String {
 @Composable
 fun BakeScreen(
     modifier: Modifier = Modifier,
-    steps: List<JourneyStep> = sampleJourney,
+    steps: List<JourneyStep> = emptyList(),
+    onSave: () -> Unit = {},
     onFinish: () -> Unit = {},
+    onHome: () -> Unit = {},
 ) {
     var currentIndex by remember { mutableIntStateOf(0) }
     var remainingSeconds by remember { mutableIntStateOf(0) }
+    var bakeComplete by remember { mutableStateOf(false) }
 
-    val current = steps[currentIndex]
-    val nextStep = steps.getOrNull(currentIndex + 1)
+    val activeSteps = steps.ifEmpty { sampleJourney }
+    val current = activeSteps[currentIndex]
+    val nextStep = activeSteps.getOrNull(currentIndex + 1)
     val isTimed = current.type.hasDuration
     val totalSeconds = current.minutes * 60
     val overdue = remainingSeconds < 0
@@ -85,8 +91,8 @@ fun BakeScreen(
     }
 
     LaunchedEffect(currentIndex) {
-        if (!steps[currentIndex].type.hasDuration) return@LaunchedEffect
-        remainingSeconds = steps[currentIndex].minutes * 60
+        if (!activeSteps[currentIndex].type.hasDuration) return@LaunchedEffect
+        remainingSeconds = activeSteps[currentIndex].minutes * 60
         while (true) {
             delay(1000)
             remainingSeconds--
@@ -94,7 +100,10 @@ fun BakeScreen(
         }
     }
 
-    val advance: () -> Unit = { if (currentIndex < steps.lastIndex) currentIndex++ else onFinish() }
+    val advance: () -> Unit = {
+        if (currentIndex < activeSteps.lastIndex) currentIndex++
+        else bakeComplete = true
+    }
 
     val nextStartsAt = if (isTimed) {
         LocalTime.now().plusSeconds(remainingSeconds.coerceAtLeast(0).toLong())
@@ -105,47 +114,62 @@ fun BakeScreen(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 22.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                Text("baking", style = MaterialTheme.typography.titleLarge)
-                Text(
-                    "step ${currentIndex + 1} of ${steps.size}",
-                    fontFamily = Hanken, fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            Spacer(Modifier.height(40.dp))
-
-            if (isTimed) {
-                CountdownRing(progress, formatTime(remainingSeconds), overdue)
-            } else {
-                TapWhenDonePrompt()
-            }
-
-            Spacer(Modifier.height(28.dp))
-
-            Text(
-                current.type.label,
-                fontFamily = Bricolage, fontWeight = FontWeight.Bold, fontSize = 26.sp,
-                color = MaterialTheme.colorScheme.onSurface,
+        if (bakeComplete) {
+            BakeCompleteScreen(
+                innerPadding = innerPadding,
+                onSave = { onSave(); onFinish() },
+                onDone = onFinish,
             )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "‹",
+                        fontFamily = Hanken,
+                        fontSize = 24.sp,
+                        color = Muted,
+                        modifier = Modifier.clickable(onClick = onHome),
+                    )
+                    Text("baking", style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        "step ${currentIndex + 1} of ${activeSteps.size}",
+                        fontFamily = Hanken, fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
 
-            Spacer(Modifier.height(20.dp))
-            StepDots(count = steps.size, current = currentIndex)
-            Spacer(Modifier.height(28.dp))
+                Spacer(Modifier.height(40.dp))
 
-            UpNextBar(nextStep = nextStep, startsAt = nextStartsAt, onClick = advance)
+                if (isTimed) {
+                    CountdownRing(progress, formatTime(remainingSeconds), overdue)
+                } else {
+                    TapWhenDonePrompt()
+                }
+
+                Spacer(Modifier.height(28.dp))
+
+                Text(
+                    current.type.label,
+                    fontFamily = Bricolage, fontWeight = FontWeight.Bold, fontSize = 26.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+
+                Spacer(Modifier.height(20.dp))
+                StepDots(count = activeSteps.size, current = currentIndex)
+                Spacer(Modifier.height(28.dp))
+
+                UpNextBar(nextStep = nextStep, startsAt = nextStartsAt, onClick = advance)
+            }
         }
     }
 }
@@ -236,6 +260,65 @@ private fun TapWhenDonePrompt() {
             "tap “up next”\nwhen you're done",
             fontFamily = Hanken, fontSize = 16.sp, textAlign = TextAlign.Center, color = Muted,
         )
+    }
+}
+
+@Composable
+private fun BakeCompleteScreen(
+    innerPadding: PaddingValues,
+    onSave: () -> Unit,
+    onDone: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+            .padding(horizontal = 22.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            "bake complete",
+            fontFamily = Bricolage, fontWeight = FontWeight.Bold, fontSize = 32.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "well baked!",
+            fontFamily = Hanken, fontSize = 16.sp, color = Muted,
+        )
+        Spacer(Modifier.height(48.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                .background(Espresso)
+                .clickable(onClick = onSave)
+                .padding(vertical = 16.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                "save bake",
+                fontFamily = Hanken, fontWeight = FontWeight.SemiBold,
+                fontSize = 16.sp, color = SurfaceCream,
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                .background(Track)
+                .clickable(onClick = onDone)
+                .padding(vertical = 16.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                "done",
+                fontFamily = Hanken, fontWeight = FontWeight.SemiBold,
+                fontSize = 16.sp, color = Muted,
+            )
+        }
     }
 }
 
