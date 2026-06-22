@@ -28,5 +28,5 @@ Recipes are saved to a library and can be edited or resumed at any time. If a ba
 - [x] Recipe library with save, edit, and delete
 - [x] Active bake persistence and resume
 - [x] App icon
-- [ ] Step timers and notifications
-- [ ] Flour type options
+- [x] Step timers and background notifications
+- [x] Flour type selector with dynamic hydration guidance

@@ -1,7 +1,13 @@
 package no.bylinnea.heve.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.media.RingtoneManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.getValue
@@ -43,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import no.bylinnea.heve.model.JourneyStep
 import no.bylinnea.heve.model.sampleJourney
+import no.bylinnea.heve.notification.StepAlarmScheduler
 import no.bylinnea.heve.ui.theme.Bricolage
 import no.bylinnea.heve.ui.theme.CreamHoney
 import no.bylinnea.heve.ui.theme.Espresso
@@ -90,9 +98,28 @@ fun BakeScreen(
         )
     }
 
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) {}
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { StepAlarmScheduler.cancel(context) }
+    }
+
     LaunchedEffect(currentIndex) {
-        if (!activeSteps[currentIndex].type.hasDuration) return@LaunchedEffect
-        remainingSeconds = activeSteps[currentIndex].minutes * 60
+        val step = activeSteps[currentIndex]
+        StepAlarmScheduler.cancel(context)
+        if (!step.type.hasDuration) return@LaunchedEffect
+        StepAlarmScheduler.schedule(context, step.type.label, step.minutes)
+        remainingSeconds = step.minutes * 60
         while (true) {
             delay(1000)
             remainingSeconds--
