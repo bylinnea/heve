@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import no.bylinnea.heve.data.RecipeStore
 import no.bylinnea.heve.model.ActiveBake
+import no.bylinnea.heve.model.FlourType
 import no.bylinnea.heve.model.JourneyStep
 import no.bylinnea.heve.model.SavedRecipe
 import no.bylinnea.heve.ui.screens.BakeScreen
@@ -29,6 +30,7 @@ sealed class Screen {
         val initialTotalWeight: Int = 900,
         val initialSalt: Float = 2.0f,
         val initialYeast: Float = 0.8f,
+        val initialFlour: FlourType = FlourType.FLOUR_00,
     ) : Screen()
     data class Journey(val initialSteps: List<JourneyStep> = emptyList()) : Screen()
     data object Bake : Screen()
@@ -50,6 +52,7 @@ fun HeveNavGraph(modifier: Modifier = Modifier) {
     var pendingHydration by remember { mutableIntStateOf(72) }
     var pendingSalt by remember { mutableFloatStateOf(2.0f) }
     var pendingYeast by remember { mutableFloatStateOf(0.8f) }
+    var pendingFlour by remember { mutableStateOf(FlourType.FLOUR_00) }
     var pendingSteps by remember { mutableStateOf(listOf<JourneyStep>()) }
 
     fun saveRecipe() {
@@ -62,6 +65,7 @@ fun HeveNavGraph(modifier: Modifier = Modifier) {
                 hydrationPct = pendingHydration,
                 saltPct = pendingSalt,
                 yeastPct = pendingYeast,
+                flourType = pendingFlour,
                 steps = pendingSteps,
             )
         )
@@ -97,6 +101,7 @@ fun HeveNavGraph(modifier: Modifier = Modifier) {
                     pendingHydration = recipe.hydrationPct
                     pendingSalt = recipe.saltPct
                     pendingYeast = recipe.yeastPct
+                    pendingFlour = recipe.flourType
                     pendingSteps = recipe.steps
                 }
                 backStack = backStack + Screen.Bake
@@ -113,6 +118,7 @@ fun HeveNavGraph(modifier: Modifier = Modifier) {
                 pendingHydration = recipe.hydrationPct
                 pendingSalt = recipe.saltPct
                 pendingYeast = recipe.yeastPct
+                pendingFlour = recipe.flourType
                 pendingSteps = recipe.steps
                 backStack = backStack + Screen.Recipe(
                     name = recipe.name,
@@ -120,6 +126,7 @@ fun HeveNavGraph(modifier: Modifier = Modifier) {
                     initialTotalWeight = recipe.totalWeight,
                     initialSalt = recipe.saltPct,
                     initialYeast = recipe.yeastPct,
+                    initialFlour = recipe.flourType,
                 )
             },
             onDeleteRecipe = { recipe ->
@@ -135,12 +142,14 @@ fun HeveNavGraph(modifier: Modifier = Modifier) {
                 initialHydration = screen.initialHydration,
                 initialSalt = screen.initialSalt,
                 initialYeast = screen.initialYeast,
-                onNext = { totalWeight, hydrationPct, salt, yeast ->
+                initialFlour = screen.initialFlour,
+                onNext = { totalWeight, hydrationPct, salt, yeast, flour ->
                     pendingName = screen.name
                     pendingTotalWeight = totalWeight
                     pendingHydration = hydrationPct
                     pendingSalt = salt
                     pendingYeast = yeast
+                    pendingFlour = flour
                     backStack = backStack + Screen.Journey(pendingSteps)
                 },
             )

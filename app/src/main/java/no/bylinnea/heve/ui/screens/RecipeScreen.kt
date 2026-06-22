@@ -1,6 +1,7 @@
 package no.bylinnea.heve.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,6 +50,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import no.bylinnea.heve.model.FlourType
 import no.bylinnea.heve.ui.components.CircleStepButton
 import no.bylinnea.heve.ui.components.HeveCard
 import no.bylinnea.heve.ui.components.IngredientSlider
@@ -69,12 +71,14 @@ fun RecipeScreen(
     initialHydration: Int = 72,
     initialSalt: Float = 2.0f,
     initialYeast: Float = 0.8f,
-    onNext: (totalWeight: Int, hydrationPct: Int, salt: Float, yeast: Float) -> Unit = { _, _, _, _ -> },
+    initialFlour: FlourType = FlourType.FLOUR_00,
+    onNext: (totalWeight: Int, hydrationPct: Int, salt: Float, yeast: Float, flour: FlourType) -> Unit = { _, _, _, _, _ -> },
 ) {
     var totalWeight by remember(initialTotalWeight) { mutableIntStateOf(initialTotalWeight) }
     var hydration by remember(initialHydration) { mutableFloatStateOf(initialHydration.toFloat()) }
     var salt by remember(initialSalt) { mutableFloatStateOf(initialSalt) }
     var yeast by remember(initialYeast) { mutableFloatStateOf(initialYeast) }
+    var flourType by remember(initialFlour) { mutableStateOf(initialFlour) }
 
     val dough = bakersBreakdown(totalWeight, hydration, salt, yeast)
     val focusManager = LocalFocusManager.current
@@ -87,7 +91,7 @@ fun RecipeScreen(
                 Button(
                     onClick = {
                         focusManager.clearFocus()
-                        onNext(totalWeight, hydration.roundToInt(), salt, yeast)
+                        onNext(totalWeight, hydration.roundToInt(), salt, yeast, flourType)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -171,6 +175,8 @@ fun RecipeScreen(
                 }
             }
             Spacer(Modifier.height(12.dp))
+            FlourSelector(selected = flourType, onSelect = { flourType = it })
+            Spacer(Modifier.height(12.dp))
             IngredientSlider(
                 label = "hydration",
                 valueText = "${hydration.roundToInt()}%",
@@ -178,9 +184,9 @@ fun RecipeScreen(
                 onValueChange = { hydration = it.roundToInt().toFloat() },
                 valueRange = 55f..100f,
                 step = 1f,
-                bandRange = 65f..80f,
+                bandRange = flourType.hydrationBand,
                 startLabel = "55%",
-                bandLabel = "rustic 65–80%",
+                bandLabel = flourType.hydrationBandLabel,
                 endLabel = "100%",
             )
             Spacer(Modifier.height(12.dp))
@@ -211,6 +217,43 @@ fun RecipeScreen(
             )
             Spacer(Modifier.height(16.dp))
             ResultPanel(dough)
+        }
+    }
+}
+
+@Composable
+private fun FlourSelector(
+    selected: FlourType,
+    onSelect: (FlourType) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FlourType.entries.forEach { flour ->
+            val isSelected = flour == selected
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (isSelected) Espresso else MaterialTheme.colorScheme.surface)
+                    .border(
+                        width = 1.dp,
+                        color = if (isSelected) Espresso else MaterialTheme.colorScheme.outline,
+                        shape = RoundedCornerShape(10.dp),
+                    )
+                    .clickable { onSelect(flour) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = flour.label,
+                    fontFamily = Hanken,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                    fontSize = 14.sp,
+                    color = if (isSelected) SurfaceCream else MaterialTheme.colorScheme.onSurface,
+                )
+            }
         }
     }
 }

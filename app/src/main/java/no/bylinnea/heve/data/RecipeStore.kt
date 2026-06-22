@@ -4,6 +4,7 @@ import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import no.bylinnea.heve.model.FlourType
 import no.bylinnea.heve.model.JourneyStep
 import no.bylinnea.heve.model.SavedRecipe
 import no.bylinnea.heve.model.StepType
@@ -59,6 +60,7 @@ class RecipeStore(context: Context) {
                     put("hydrationPct", recipe.hydrationPct)
                     put("saltPct", recipe.saltPct.toDouble())
                     put("yeastPct", recipe.yeastPct.toDouble())
+                    put("flourType", recipe.flourType.name)
                     put("steps", JSONArray().apply {
                         recipe.steps.forEach { step ->
                             put(JSONObject().apply {
@@ -84,6 +86,7 @@ class RecipeStore(context: Context) {
                     hydrationPct = obj.getInt("hydrationPct"),
                     saltPct = if (obj.has("saltPct")) obj.getDouble("saltPct").toFloat() else 2.0f,
                     yeastPct = if (obj.has("yeastPct")) obj.getDouble("yeastPct").toFloat() else 0.8f,
+                    flourType = if (obj.has("flourType")) runCatching { FlourType.valueOf(obj.getString("flourType")) }.getOrDefault(FlourType.FLOUR_00) else FlourType.FLOUR_00,
                     steps = (0 until stepsArr.length()).map { j ->
                         val s = stepsArr.getJSONObject(j)
                         JourneyStep(
