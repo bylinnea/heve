@@ -12,8 +12,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import no.bylinnea.heve.data.LogStore
 import no.bylinnea.heve.data.RecipeStore
 import no.bylinnea.heve.model.ActiveBake
+import no.bylinnea.heve.model.BakeLog
 import no.bylinnea.heve.model.FlourType
 import no.bylinnea.heve.model.JourneyStep
 import no.bylinnea.heve.model.SavedRecipe
@@ -40,8 +42,12 @@ sealed class Screen {
 fun HeveNavGraph(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val store = remember { RecipeStore(context) }
+    val logStore = remember { LogStore(context) }
     val savedRecipes by store.recipes.collectAsState()
+    val logEntries by logStore.entries.collectAsState()
     val activeBakeId by store.activeBakeId.collectAsState()
+    val activeStepIndex by store.activeStepIndex.collectAsState()
+    val activeStepStartTime by store.stepStartTime.collectAsState()
 
     var backStack by remember { mutableStateOf(listOf<Screen>(Screen.Library)) }
     val current = backStack.last()
@@ -91,6 +97,7 @@ fun HeveNavGraph(modifier: Modifier = Modifier) {
             modifier = modifier,
             activeBake = activeBake,
             recipes = savedRecipes,
+            logEntries = logEntries,
             onResumeBake = {
                 val id = activeBakeId
                 val recipe = savedRecipes.firstOrNull { it.id == id }
@@ -133,6 +140,7 @@ fun HeveNavGraph(modifier: Modifier = Modifier) {
                 store.delete(recipe.id)
                 if (activeBakeId == recipe.id) store.clearActiveBake()
             },
+            onDeleteLog = { entry -> logStore.delete(entry.id) },
         )
         is Screen.Recipe -> key(screen) {
             RecipeScreen(
@@ -165,14 +173,27 @@ fun HeveNavGraph(modifier: Modifier = Modifier) {
                 pendingSteps = steps
                 saveRecipe()
                 store.setActiveBake(pendingId)
+                store.setActiveStep(0)
                 backStack = backStack + Screen.Bake
             },
         )
         is Screen.Bake -> BakeScreen(
             modifier = modifier,
             steps = pendingSteps,
+            initialStepIndex = activeStepIndex,
+            stepStartTime = activeStepStartTime,
+            onStepStart = { index -> store.setActiveStep(index) },
             onSave = { saveRecipe() },
             onFinish = {
+                logStore.save(
+                    BakeLog(
+                        id = System.currentTimeMillis(),
+                        recipeName = pendingName,
+                        flourType = pendingFlour,
+                        totalWeight = pendingTotalWeight,
+                        totalMinutes = pendingSteps.sumOf { it.minutes },
+                    )
+                )
                 store.clearActiveBake()
                 backStack = listOf(Screen.Library)
             },

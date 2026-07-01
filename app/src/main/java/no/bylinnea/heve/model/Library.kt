@@ -24,6 +24,14 @@ data class SavedRecipe(
     val durationHours: Int get() = steps.sumOf { it.minutes } / 60
 }
 
+data class BakeLog(
+    val id: Long,
+    val recipeName: String,
+    val flourType: FlourType,
+    val totalWeight: Int,
+    val totalMinutes: Int,
+)
+
 data class ActiveBake(
     val recipeName: String,
     val currentStep: String,

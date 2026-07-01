@@ -74,15 +74,17 @@ private fun formatTime(seconds: Int): String {
 fun BakeScreen(
     modifier: Modifier = Modifier,
     steps: List<JourneyStep> = emptyList(),
+    initialStepIndex: Int = 0,
+    stepStartTime: Long? = null,
+    onStepStart: (index: Int) -> Unit = {},
     onSave: () -> Unit = {},
     onFinish: () -> Unit = {},
     onHome: () -> Unit = {},
 ) {
-    var currentIndex by remember { mutableIntStateOf(0) }
+    val activeSteps = steps.ifEmpty { sampleJourney }
+    var currentIndex by remember { mutableIntStateOf(initialStepIndex.coerceIn(0, activeSteps.lastIndex)) }
     var remainingSeconds by remember { mutableIntStateOf(0) }
     var bakeComplete by remember { mutableStateOf(false) }
-
-    val activeSteps = steps.ifEmpty { sampleJourney }
     val current = activeSteps[currentIndex]
     val nextStep = activeSteps.getOrNull(currentIndex + 1)
     val isTimed = current.type.hasDuration
@@ -117,9 +119,13 @@ fun BakeScreen(
     LaunchedEffect(currentIndex) {
         val step = activeSteps[currentIndex]
         StepAlarmScheduler.cancel(context)
+        val isResumingThisStep = currentIndex == initialStepIndex && stepStartTime != null
+        if (!isResumingThisStep) onStepStart(currentIndex)
         if (!step.type.hasDuration) return@LaunchedEffect
-        StepAlarmScheduler.schedule(context, step.type.label, step.minutes)
-        remainingSeconds = step.minutes * 60
+        val startMs = if (isResumingThisStep) stepStartTime!! else System.currentTimeMillis()
+        val triggerMs = startMs + step.minutes * 60_000L
+        StepAlarmScheduler.scheduleAt(context, step.type.label, triggerMs)
+        remainingSeconds = ((triggerMs - System.currentTimeMillis()) / 1000L).toInt()
         while (true) {
             delay(1000)
             remainingSeconds--

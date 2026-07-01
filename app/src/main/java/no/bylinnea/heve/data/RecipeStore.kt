@@ -34,14 +34,31 @@ class RecipeStore(context: Context) {
         prefs.edit().putString(KEY, serialize(updated)).apply()
     }
 
+    private val _activeStepIndex = MutableStateFlow(prefs.getInt(STEP_IDX_KEY, 0))
+    val activeStepIndex: StateFlow<Int> = _activeStepIndex.asStateFlow()
+
+    private val _stepStartTime = MutableStateFlow<Long?>(
+        prefs.getLong(STEP_START_KEY, -1L).takeIf { it != -1L }
+    )
+    val stepStartTime: StateFlow<Long?> = _stepStartTime.asStateFlow()
+
     fun setActiveBake(id: Long) {
         _activeBakeId.value = id
         prefs.edit().putLong(BAKE_KEY, id).apply()
     }
 
+    fun setActiveStep(index: Int) {
+        val now = System.currentTimeMillis()
+        _activeStepIndex.value = index
+        _stepStartTime.value = now
+        prefs.edit().putInt(STEP_IDX_KEY, index).putLong(STEP_START_KEY, now).apply()
+    }
+
     fun clearActiveBake() {
         _activeBakeId.value = null
-        prefs.edit().remove(BAKE_KEY).apply()
+        _activeStepIndex.value = 0
+        _stepStartTime.value = null
+        prefs.edit().remove(BAKE_KEY).remove(STEP_IDX_KEY).remove(STEP_START_KEY).apply()
     }
 
     private fun load(): List<SavedRecipe> =
@@ -50,6 +67,8 @@ class RecipeStore(context: Context) {
     private companion object {
         const val KEY = "recipes"
         const val BAKE_KEY = "active_bake_id"
+        const val STEP_IDX_KEY = "active_step_index"
+        const val STEP_START_KEY = "step_start_time"
 
         fun serialize(recipes: List<SavedRecipe>): String = JSONArray().apply {
             recipes.forEach { recipe ->

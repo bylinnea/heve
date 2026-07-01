@@ -9,17 +9,15 @@ import android.os.Build
 object StepAlarmScheduler {
     private const val REQUEST_CODE = 7001
 
-    fun schedule(context: Context, stepLabel: String, minutes: Int) {
+    fun scheduleAt(context: Context, stepLabel: String, triggerAtMs: Long) {
         val alarmManager = context.getSystemService(AlarmManager::class.java)
         val intent = buildIntent(context, stepLabel)
-        val triggerAt = System.currentTimeMillis() + minutes * 60_000L
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && alarmManager.canScheduleExactAlarms()) {
-            alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, intent)
+            alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMs, intent)
         } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, intent)
+            alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMs, intent)
         } else {
-            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, intent)
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMs, intent)
         }
     }
 

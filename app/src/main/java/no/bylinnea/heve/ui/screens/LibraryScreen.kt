@@ -47,8 +47,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import no.bylinnea.heve.model.ActiveBake
+import no.bylinnea.heve.model.BakeLog
 import no.bylinnea.heve.model.SavedRecipe
 import no.bylinnea.heve.ui.theme.Bricolage
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import no.bylinnea.heve.ui.theme.CreamHoney
 import no.bylinnea.heve.ui.theme.Espresso
 import no.bylinnea.heve.ui.theme.Hanken
@@ -68,16 +72,21 @@ private fun formatRemaining(minutes: Int): String {
     }
 }
 
+private enum class LibraryTab { RECIPES, LOG }
+
 @Composable
 fun LibraryScreen(
     modifier: Modifier = Modifier,
     activeBake: ActiveBake? = null,
     recipes: List<SavedRecipe> = emptyList(),
+    logEntries: List<BakeLog> = emptyList(),
     onResumeBake: () -> Unit = {},
     onNewRecipe: (String) -> Unit = {},
     onRecipeClick: (SavedRecipe) -> Unit = {},
     onDeleteRecipe: (SavedRecipe) -> Unit = {},
+    onDeleteLog: (BakeLog) -> Unit = {},
 ) {
+    var selectedTab by remember { mutableStateOf(LibraryTab.RECIPES) }
     var showNewDialog by remember { mutableStateOf(false) }
 
     if (showNewDialog) {
@@ -105,52 +114,88 @@ fun LibraryScreen(
                         .fillMaxWidth()
                         .padding(start = 22.dp, end = 22.dp, top = 16.dp, bottom = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Bottom,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("library", style = MaterialTheme.typography.titleLarge)
-                    Text(
-                        text = "+ new",
-                        fontFamily = Hanken,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp,
-                        color = Honey,
-                        modifier = Modifier.clickable { showNewDialog = true },
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        LibraryTab.entries.forEach { tab ->
+                            val selected = tab == selectedTab
+                            Text(
+                                text = if (tab == LibraryTab.RECIPES) "library" else "log",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = if (selected) MaterialTheme.colorScheme.onSurface else Muted,
+                                modifier = Modifier.clickable { selectedTab = tab },
+                            )
+                        }
+                    }
+                    if (selectedTab == LibraryTab.RECIPES) {
+                        Text(
+                            text = "+ new",
+                            fontFamily = Hanken,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 15.sp,
+                            color = Honey,
+                            modifier = Modifier.clickable { showNewDialog = true },
+                        )
+                    }
                 }
             }
 
-            if (activeBake != null) {
-                item {
-                    ResumeBakeBanner(
-                        bake = activeBake,
-                        modifier = Modifier.padding(horizontal = 22.dp, vertical = 4.dp),
-                        onClick = onResumeBake,
-                    )
-                    Spacer(Modifier.height(16.dp))
+            if (selectedTab == LibraryTab.RECIPES) {
+                if (activeBake != null) {
+                    item {
+                        ResumeBakeBanner(
+                            bake = activeBake,
+                            modifier = Modifier.padding(horizontal = 22.dp, vertical = 4.dp),
+                            onClick = onResumeBake,
+                        )
+                        Spacer(Modifier.height(16.dp))
+                    }
                 }
-            }
-
-            if (recipes.isEmpty()) {
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 22.dp, vertical = 32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text("no recipes yet", fontFamily = Hanken, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = Muted)
-                        Text("tap + new to create your first", fontFamily = Hanken, fontSize = 13.sp, color = Muted)
+                if (recipes.isEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 22.dp, vertical = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text("no recipes yet", fontFamily = Hanken, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = Muted)
+                            Text("tap + new to create your first", fontFamily = Hanken, fontSize = 13.sp, color = Muted)
+                        }
+                    }
+                } else {
+                    items(recipes, key = { it.id }) { recipe ->
+                        RecipeRow(
+                            recipe = recipe,
+                            modifier = Modifier.padding(horizontal = 22.dp, vertical = 4.dp),
+                            onClick = { onRecipeClick(recipe) },
+                            onDelete = { onDeleteRecipe(recipe) },
+                        )
                     }
                 }
             } else {
-                items(recipes, key = { it.id }) { recipe ->
-                    RecipeRow(
-                        recipe = recipe,
-                        modifier = Modifier.padding(horizontal = 22.dp, vertical = 4.dp),
-                        onClick = { onRecipeClick(recipe) },
-                        onDelete = { onDeleteRecipe(recipe) },
-                    )
+                if (logEntries.isEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 22.dp, vertical = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text("no bakes logged yet", fontFamily = Hanken, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = Muted)
+                            Text("finish a bake to see it here", fontFamily = Hanken, fontSize = 13.sp, color = Muted)
+                        }
+                    }
+                } else {
+                    items(logEntries, key = { it.id }) { entry ->
+                        LogRow(
+                            entry = entry,
+                            modifier = Modifier.padding(horizontal = 22.dp, vertical = 4.dp),
+                            onDelete = { onDeleteLog(entry) },
+                        )
+                    }
                 }
             }
 
@@ -267,6 +312,73 @@ private fun RecipeRow(
             modifier = Modifier
                 .size(40.dp)
                 .clip(androidx.compose.foundation.shape.CircleShape)
+                .clickable(onClick = onDelete),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("×", fontFamily = Hanken, fontSize = 20.sp, color = Muted)
+        }
+    }
+}
+
+@Composable
+private fun LogRow(
+    entry: BakeLog,
+    modifier: Modifier = Modifier,
+    onDelete: () -> Unit,
+) {
+    val date = Instant.ofEpochMilli(entry.id)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate()
+    val day = date.format(DateTimeFormatter.ofPattern("d"))
+    val month = date.format(DateTimeFormatter.ofPattern("MMM"))
+    val h = entry.totalMinutes / 60
+    val m = entry.totalMinutes % 60
+    val duration = when {
+        h > 0 && m > 0 -> "${h}h ${m}m"
+        h > 0 -> "${h}h"
+        else -> "${m}m"
+    }
+    val shape = RoundedCornerShape(12.dp)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(SurfaceCream)
+            .border(1.dp, Track, shape)
+            .padding(start = 14.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Espresso),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(day, fontFamily = Bricolage, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = SurfaceCream)
+            Text(month, fontFamily = Hanken, fontSize = 9.sp, color = CreamHoney)
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = entry.recipeName,
+                fontFamily = Hanken,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "${entry.flourType.label} · ${entry.totalWeight}g · $duration",
+                fontFamily = Hanken,
+                fontSize = 12.sp,
+                color = Muted,
+            )
+        }
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
                 .clickable(onClick = onDelete),
             contentAlignment = Alignment.Center,
         ) {

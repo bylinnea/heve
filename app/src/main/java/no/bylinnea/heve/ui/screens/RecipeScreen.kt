@@ -80,6 +80,7 @@ fun RecipeScreen(
     var yeast by remember(initialYeast) { mutableFloatStateOf(initialYeast) }
     var flourType by remember(initialFlour) { mutableStateOf(initialFlour) }
 
+    var batchCount by remember { mutableIntStateOf(1) }
     val dough = bakersBreakdown(totalWeight, hydration, salt, yeast)
     val focusManager = LocalFocusManager.current
 
@@ -216,7 +217,11 @@ fun RecipeScreen(
                 endLabel = "2.0%",
             )
             Spacer(Modifier.height(16.dp))
-            ResultPanel(dough)
+            ResultPanel(
+                dough = dough,
+                batchCount = batchCount,
+                onBatchCountChange = { batchCount = it },
+            )
         }
     }
 }
@@ -354,7 +359,11 @@ private fun bakersBreakdown(
     )
 }
 @Composable
-private fun ResultPanel(dough: DoughBreakdown) {
+private fun ResultPanel(
+    dough: DoughBreakdown,
+    batchCount: Int,
+    onBatchCountChange: (Int) -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -362,21 +371,55 @@ private fun ResultPanel(dough: DoughBreakdown) {
             .background(Espresso)
             .padding(16.dp)
     ) {
-        Text(
-            text = "your dough".uppercase(),
-            fontFamily = Hanken,
-            fontWeight = FontWeight.Bold,
-            fontSize = 12.sp,
-            letterSpacing = 0.08.em,
-            color = CreamHoney
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "your dough".uppercase(),
+                fontFamily = Hanken,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                letterSpacing = 0.08.em,
+                color = CreamHoney,
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    text = "−",
+                    fontFamily = Hanken,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = if (batchCount > 1) SurfaceCream else SurfaceCream.copy(alpha = 0.3f),
+                    modifier = Modifier.clickable(enabled = batchCount > 1) { onBatchCountChange(batchCount - 1) },
+                )
+                Text(
+                    text = if (batchCount == 1) "1 batch" else "$batchCount batches",
+                    fontFamily = Hanken,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                    color = CreamHoney,
+                )
+                Text(
+                    text = "+",
+                    fontFamily = Hanken,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = if (batchCount < 8) SurfaceCream else SurfaceCream.copy(alpha = 0.3f),
+                    modifier = Modifier.clickable(enabled = batchCount < 8) { onBatchCountChange(batchCount + 1) },
+                )
+            }
+        }
         Spacer(Modifier.height(10.dp))
 
         val rows = listOf(
-            "flour" to dough.flour,
-            "water" to dough.water,
-            "salt" to dough.salt,
-            "yeast" to dough.yeast,
+            "flour" to dough.flour * batchCount,
+            "water" to dough.water * batchCount,
+            "salt" to dough.salt * batchCount,
+            "yeast" to dough.yeast * batchCount,
         )
         rows.forEachIndexed { index, (label, grams) ->
             if (index > 0) {
